@@ -6,6 +6,7 @@ import (
 	"net"
 	"ngrok/cache"
 	"ngrok/log"
+	log1 "log"
 	"sync"
 	"time"
 )
@@ -154,9 +155,14 @@ func (r *TunnelRegistry) Del(url string) {
 	delete(r.tunnels, url)
 }
 
+func init() {
+	log1.SetFlags(log1.LstdFlags | log1.Lshortfile)
+}
+
 func (r *TunnelRegistry) Get(url string) *Tunnel {
 	r.RLock()
 	defer r.RUnlock()
+	log1.Printf("getting tunnel by url %+v from tunnels %+v\n", url, r.tunnels)
 	return r.tunnels[url]
 }
 
