@@ -3,7 +3,6 @@ package server
 import (
 	"encoding/gob"
 	"fmt"
-	"github.com/golang/glog"
 	"net"
 	"net/url"
 	"ngrok/cache"
