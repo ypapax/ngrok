@@ -3,7 +3,9 @@ package server
 import (
 	"encoding/gob"
 	"fmt"
+	"github.com/golang/glog"
 	"net"
+	"net/url"
 	"ngrok/cache"
 	"ngrok/log"
 	log1 "log"
@@ -77,9 +79,14 @@ func (r *TunnelRegistry) SaveCacheThread(path string, interval time.Duration) {
 	}()
 }
 
-func urlExceptPort(url string) string {
-	parts := strings.Split(url, ":")
-	return strings.Join(parts[:len(parts)-1], ":")
+func urlExceptPort(u string) (string, error) {
+	ur, err := url.Parse(u)
+	if err != nil {
+		log1.Println("error: ", err)
+		return "", err
+	}
+	ur.Host = strings.Split(ur.Host, ":")[0]
+	return ur.String(), nil
 }
 
 // Register a tunnel with a specific url, returns an error
@@ -88,10 +95,15 @@ func (r *TunnelRegistry) Register(url string, t *Tunnel) error {
 	r.Lock()
 	defer r.Unlock()
 
-	if r.tunnels[url] != nil {
-		return fmt.Errorf("The tunnel %s is already registered.", url)
+	url1, err := urlExceptPort(url)
+	if err != nil {
+		log1.Println("error: ", err)
+		return err
 	}
-	url1 := urlExceptPort(url)
+	if r.tunnels[url1] != nil {
+		return fmt.Errorf("The tunnel %s is already registered.", url1)
+	}
+
 	log1.Printf("setting tunnel initial url %+v, final url: %+v\n", url, url1)
 	r.tunnels[url1] = t
 
@@ -169,7 +181,11 @@ func init() {
 func (r *TunnelRegistry) Get(url string) *Tunnel {
 	r.RLock()
 	defer r.RUnlock()
-	url1 := urlExceptPort(url)
+	url1, err := urlExceptPort(url)
+	if err != nil {
+		log1.Println("error: ", err)
+		return nil
+	}
 
 	log1.Printf("getting tunnel by url %+v, url1: %+v from tunnels %+v\n", url, url1, r.tunnels)
 	return r.tunnels[url1]
